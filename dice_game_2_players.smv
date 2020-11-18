@@ -83,6 +83,7 @@ ASSIGN
             action = waiting: waiting;
             action = rolling: done;
             action = done: waiting;
+			action = lost: lost;
         esac;
 
         -- Increment the array index, modulo the number of dice that are left. TODO only update when in certain action state.
