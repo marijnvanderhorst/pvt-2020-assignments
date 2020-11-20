@@ -5,6 +5,7 @@ DEFINE
 
 VAR
     playerTurn: 0 .. 1; -- Index of which player's turn it is to choose a number.
+    --choice: 1 .. 6;
     p0: player(m);
     p1: player(m);
 
@@ -12,12 +13,19 @@ ASSIGN
     init(playerTurn) := 0; -- Player 0 may start choosing.
     init(p0.hasTurn) := TRUE;
     init(p1.hasTurn) := FALSE;
+    --init(choice) := 1;
+
+    --next(choice) := case
+    --    p0.action = choosing | p1.action = choosing: 1 .. 6;
+    --    TRUE: choice;
+    --esac;
+
 
     -- Define which player's turn it is. TODO check if possible to simplify using TRANS.
     next(playerTurn) := case
-        playerTurn = 0 & p0.action = chose: 1;
+        playerTurn = 0 & p0.action = done: 1;
         playerTurn = 0: 0;
-        playerTurn = 1 & p1.action = chose: 0;
+        playerTurn = 1 & p1.action = done: 0;
         playerTurn = 1: 1;
     esac;
 
@@ -45,17 +53,31 @@ ASSIGN
         TRUE: FALSE;
     esac;
 
+    next(p0.dice) := case
+        p0.dice = 0: 0;
+        p0.action = done & p1.action = done & p0.hasTurn & p0.points < p1.points: p0.dice - 1;
+        TRUE: p0.dice;
+    esac;
+
+    next(p1.dice) := case
+        p1.dice = 0: 0;
+        p0.action = done & p1.action = done & p1.hasTurn & p1.points < p0.points: p1.dice - 1;
+        TRUE: p1.dice;
+    esac;
+
+TRANS
+    next(p0.choice) = next(p1.choice);
 
 MODULE player(nrdice)
 VAR
         dice: 0 .. nrdice; -- The number of dice the player has left.
-        eyes: array 0 .. nrdice of 1 .. 6; -- The values of all the dice, changes after each roll.
+        eyes: array 0 .. (nrdice - 1) of 1 .. 6; -- The values of all the dice, changes after each roll.
         choice: 1 .. 6; -- Choice made by the player.
         hasTurn: boolean; -- To know if the current player may chose
         mayRoll: boolean; -- To know if the current player can roll their dice.
-        action: {waiting, choosing, chose, rolling, done, lost};
-        points: 0 .. 100; -- todo upperbound
-        i: 0 .. nrdice; -- Probably needed for counting points, currently unused.
+        action: {waiting, choosing, chose, rolling, counting, done, lost};
+        points: 0 .. nrdice;
+        i: 0 .. (nrdice - 1); -- Probably needed for counting points, currently unused.
 
 ASSIGN
         init(dice) := nrdice; -- Initial number of dice.
@@ -63,13 +85,12 @@ ASSIGN
         init(mayRoll) := FALSE; -- Initially no players may roll their dice.
         init(points) := 0; -- Initially all players have 0 points.
         init(i) := 0; -- Used as a counter for indexing the `eyes` array.
+        init(choice) := 1;
         
-        next(dice) := dice; -- TODO decrement when applicable.
-
         -- When the player is choosing, undeterministically choose a new number, otherwise keep unaltered.
         next(choice) := case
-            next(action) = choosing: 1 .. 6;
-            TRUE: choice;
+            action != choosing & hasTurn = TRUE: choice;
+            TRUE: 1 .. 6;
         esac;
 
         -- Define the next action.
@@ -81,15 +102,25 @@ ASSIGN
             action = waiting & mayRoll = TRUE: rolling;
             action = waiting & hasTurn = TRUE: choosing;
             action = waiting: waiting;
-            action = rolling: done;
+            action = rolling: counting;
+            action = counting & i = (dice - 1): done;
+            action = counting: counting;
             action = done: waiting;
-			action = lost: lost;
+            action = lost: lost;
         esac;
 
         -- Increment the array index, modulo the number of dice that are left. TODO only update when in certain action state.
         next(i) := case
-            dice = 0: i;
+            dice = 0: 0;
+            action != counting: 0;
             TRUE: (i + 1) mod dice;
+        esac;
+
+        next(points) := case
+            action = waiting: 0;
+            points = nrdice: nrdice;
+            action = counting & eyes[i] = choice: (points + 1);
+            TRUE: points;
         esac;
 
 TRANS
