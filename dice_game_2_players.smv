@@ -68,6 +68,13 @@ ASSIGN
 TRANS
     next(p0.choice) = next(p1.choice);
 
+-- Always exactly one of the players has the turn.
+SPEC AG ((p0.hasTurn | p1.hasTurn) & !(p0.hasTurn & p1.hasTurn));
+-- When the players are counting their number of correct dice, they do so using the same chosen number.
+SPEC AG ((p0.action = counting & p1.action = counting) -> p0.choice = p1.choice);
+-- When a player is allowed to roll, none of the players is currently choosing a number.
+SPEC AG (p0.mayRoll | p1.mayRoll -> p0.action != choosing & p1.action != choosing);
+
 MODULE player(nrdice)
 VAR
         dice: 0 .. nrdice; -- The number of dice the player has left.
@@ -127,3 +134,18 @@ TRANS
     -- Only when not rolling the dice do the current dice remain unaltered, otherwise they can do whathever they want.
     -- I.e. when rolling, the eyes get updated undeterministically.
     action != rolling -> (next(eyes) = eyes);
+
+-- Player may only be choosing (or have chosen) when he has the turn.
+SPEC AG ((action = choosing | action = chose) -> hasTurn = TRUE);
+-- Whenever a player has lost, he will have lost forever.
+SPEC AG (action = lost -> AG action = lost);
+-- A player can only have points while counting, to make sure that he always starts a round with 0 points.
+SPEC AG (action != counting -> points = 0);
+-- When a player has no dice left, eventually he loses. (TODO add ability to win)
+SPEC AG (dice = 0 -> AF action = lost);
+-- When a player is rolling their dice, he must be allowed to roll.
+SPEC AG (action = rolling -> mayRoll = TRUE);
+-- A player can have at most as many points as he has dice in that round.
+SPEC AG points <= dice;
+-- When a player has the turn during a round, it won't have the turn in the next round.
+SPEC AG (hasTurn & action = done -> AX hasTurn = FALSE);
