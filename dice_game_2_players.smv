@@ -1,7 +1,7 @@
 MODULE main
 DEFINE 
     nrplayers := 2;
-    m := 3;
+    m := 5;
 
 VAR
     playerTurn: 0 .. 1; -- Index of which player's turn it is to choose a number.
@@ -42,15 +42,19 @@ ASSIGN
 
     -- Define when the players can roll, such that they only roll AFTER the player has chosen.
     next(p0.mayRoll) := case
+        p0.action = lost: FALSE;
         playerTurn = 0 & p0.action = chose: TRUE;
         playerTurn = 1 & p1.action = chose: TRUE;
-        TRUE: FALSE;
+        next(p0.action) = done: FALSE;
+        TRUE: p0.mayRoll;
     esac;
 
     next(p1.mayRoll) := case
+        p1.action = lost: FALSE;
         playerTurn = 1 & p1.action = chose: TRUE;
         playerTurn = 0 & p0.action = chose: TRUE;
-        TRUE: FALSE;
+        next(p1.action) = done: FALSE;
+        TRUE: p1.mayRoll;
     esac;
 
     next(p0.dice) := case
@@ -68,21 +72,29 @@ ASSIGN
 TRANS
     next(p0.choice) = next(p1.choice);
 
+JUSTICE (p0.action = lost | p1.action = lost);
+
+-- Always one player loses eventually (and thus the other player wins).
+SPEC AF (p0.action = lost | p1.action = lost);
+-- Never both players lose at the same time (and thus at least one player always wins).
+SPEC AG (p0.action != lost | p1.action != lost);
 -- Always exactly one of the players has the turn.
 SPEC AG ((p0.hasTurn | p1.hasTurn) & !(p0.hasTurn & p1.hasTurn));
 -- When the players are counting their number of correct dice, they do so using the same chosen number.
-SPEC AG ((p0.action = counting & p1.action = counting) -> p0.choice = p1.choice);
+SPEC AG ((p0.action = rolling & p1.action = rolling) -> p0.choice = p1.choice);
 -- When a player is allowed to roll, none of the players is currently choosing a number.
 SPEC AG (p0.mayRoll | p1.mayRoll -> p0.action != choosing & p1.action != choosing);
+-- If one of the players has chosen a number, both players will be rolling at some point.
+SPEC AF (p0.action = chose | p1.action = chose -> AF(p0.action = rolling & p1.action = rolling));
 
 MODULE player(nrdice)
 VAR
         dice: 0 .. nrdice; -- The number of dice the player has left.
-        eyes: array 0 .. (nrdice - 1) of 1 .. 6; -- The values of all the dice, changes after each roll.
+        eyes: 1 .. 6; -- The values of all the dice, changes after each roll.
         choice: 1 .. 6; -- Choice made by the player.
         hasTurn: boolean; -- To know if the current player may chose
         mayRoll: boolean; -- To know if the current player can roll their dice.
-        action: {waiting, choosing, chose, rolling, counting, done, lost};
+        action: {waiting, choosing, chose, rolling, done, lost};
         points: 0 .. nrdice;
         i: 0 .. (nrdice - 1); -- Probably needed for counting points, currently unused.
 
@@ -109,9 +121,8 @@ ASSIGN
             action = waiting & mayRoll = TRUE: rolling;
             action = waiting & hasTurn = TRUE: choosing;
             action = waiting: waiting;
-            action = rolling: counting;
-            action = counting & i = (nrdice - 1): done;
-            action = counting: counting;
+            action = rolling & i = (nrdice - 1): done;
+            action = rolling: rolling;
             action = done: waiting;
             action = lost: lost;
         esac;
@@ -119,35 +130,54 @@ ASSIGN
         -- Increment the array index, modulo the number of dice that are left. TODO only update when in certain action state.
         next(i) := case
             dice = 0: 0;
-            action != counting: 0;
+            action != rolling: 0;
             TRUE: (i + 1) mod nrdice;
         esac;
 
         next(points) := case
             next(action) = waiting: 0;
             points = nrdice: nrdice;
-            action = counting & i < dice & eyes[i] = choice: (points + 1);
+            action = rolling & i < dice & eyes = choice: (points + 1);
             TRUE: points;
         esac;
 
 TRANS
     -- Only when not rolling the dice do the current dice remain unaltered, otherwise they can do whathever they want.
     -- I.e. when rolling, the eyes get updated undeterministically.
-    action != rolling -> (next(eyes) = eyes);
+    next(action) != rolling -> (next(eyes) = eyes);
 
--- SPEC AG (dice = 0);
-
+-- When a player is choosing he must always eventually be done so.
+SPEC AG (action = choosing -> AF(action = chose));
+-- When a player has the turn and is waiting, he must always eventually be choosing a number.
+SPEC AG (hasTurn & action = waiting -> AF(action = choosing));
+-- When a player has chosen, he must always eventually be rolling his dice.
+SPEC AG (action = chose -> AF(action = rolling));
+-- When a player is rolling, he must always eventually be done so.
+SPEC AG (action = rolling -> AF(action = done));
+-- When a player may roll, he must always eventually be rolling.
+SPEC AG(mayRoll -> AF(action = rolling));
+-- When a player is done, he must always eventually continue (either by waiting for the next round or losing the game).
+SPEC AG(action = done -> AF(action = waiting | action = lost));
 -- Player may only be choosing (or have chosen) when he has the turn.
-SPEC AG ((action = choosing | action = chose) -> hasTurn = TRUE);
+SPEC AG ((action = choosing | action = chose) -> hasTurn);
 -- Whenever a player has lost, he will have lost forever.
 SPEC AG (action = lost -> AG action = lost);
 -- A player can only have points while counting, to make sure that he always starts a round with 0 points.
-SPEC AG (action != counting & action != done -> points = 0);
+SPEC AG (action != rolling & action != done -> points = 0);
 -- When a player has no dice left, eventually he loses. (TODO add ability to win)
 SPEC AG (dice = 0 -> AF action = lost);
 -- When a player is rolling their dice, he must be allowed to roll.
-SPEC AG (action = rolling -> mayRoll = TRUE);
+SPEC AG (action = rolling -> mayRoll);
 -- A player can have at most as many points as he has dice in that round.
 SPEC AG points <= dice;
 -- When a player has the turn during a round, it won't have the turn in the next round.
 SPEC AG (hasTurn & action = done -> AX hasTurn = FALSE);
+-- It is possible to get 5 points.
+SPEC EF (points = 5);
+-- While a player is rolling, the choice never changes.
+SPEC AG (action = rolling & choice = 1 -> AX(choice = 1));
+SPEC AG (action = rolling & choice = 2 -> AX(choice = 2));
+SPEC AG (action = rolling & choice = 3 -> AX(choice = 3));
+SPEC AG (action = rolling & choice = 4 -> AX(choice = 4));
+SPEC AG (action = rolling & choice = 5 -> AX(choice = 5));
+SPEC AG (action = rolling & choice = 6 -> AX(choice = 6));
