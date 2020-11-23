@@ -1,7 +1,7 @@
 MODULE main
 DEFINE 
     nrplayers := 2;
-    m := 5;
+    m := 3;
 
 VAR
     playerTurn: 0 .. 1; -- Index of which player's turn it is to choose a number.
@@ -110,7 +110,7 @@ ASSIGN
             action = waiting & hasTurn = TRUE: choosing;
             action = waiting: waiting;
             action = rolling: counting;
-            action = counting & i = (dice - 1): done;
+            action = counting & i = (nrdice - 1): done;
             action = counting: counting;
             action = done: waiting;
             action = lost: lost;
@@ -120,13 +120,13 @@ ASSIGN
         next(i) := case
             dice = 0: 0;
             action != counting: 0;
-            TRUE: (i + 1) mod dice;
+            TRUE: (i + 1) mod nrdice;
         esac;
 
         next(points) := case
-            action = waiting: 0;
+            next(action) = waiting: 0;
             points = nrdice: nrdice;
-            action = counting & eyes[i] = choice: (points + 1);
+            action = counting & i < dice & eyes[i] = choice: (points + 1);
             TRUE: points;
         esac;
 
@@ -135,12 +135,14 @@ TRANS
     -- I.e. when rolling, the eyes get updated undeterministically.
     action != rolling -> (next(eyes) = eyes);
 
+-- SPEC AG (dice = 0);
+
 -- Player may only be choosing (or have chosen) when he has the turn.
 SPEC AG ((action = choosing | action = chose) -> hasTurn = TRUE);
 -- Whenever a player has lost, he will have lost forever.
 SPEC AG (action = lost -> AG action = lost);
 -- A player can only have points while counting, to make sure that he always starts a round with 0 points.
-SPEC AG (action != counting -> points = 0);
+SPEC AG (action != counting & action != done -> points = 0);
 -- When a player has no dice left, eventually he loses. (TODO add ability to win)
 SPEC AG (dice = 0 -> AF action = lost);
 -- When a player is rolling their dice, he must be allowed to roll.
