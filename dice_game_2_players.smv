@@ -29,7 +29,7 @@ TRANS next(p0.choice) = next(p1.choice);
 -- Ensure no deadlock
 SPEC AG EX TRUE;
 -- Always one player loses eventually (and thus the other player wins).
---SPEC AF (p0.action = lost | p1.action = lost);
+SPEC AF (p0.action = lost | p1.action = lost);
 -- Never both players lose at the same time (and thus at least one player always wins).
 SPEC AG (p0.action != lost | p1.action != lost);
 -- When the game is still going, always exactly one of the players has the turn.
@@ -123,7 +123,7 @@ ASSIGN
         -----------------[ Start adapted rules ]------------------
         --action != done: dice;
         --hasTurn & points = smallestPoints: dice -1;
-        --!hasTurn & points < choosingPlayerPoints: dice -1;
+        --!hasTurn & points < choosingPlayerPoints & points = smallestPoints: dice -1;
         -----------------[ End adapted rules ]--------------------
         TRUE: dice;
     esac;
