@@ -1,10 +1,12 @@
 MODULE main
-
 VAR
     playerTurn: 0 .. 1; -- Index of which player's turn it is to choose a number.
     numberChosen: boolean; -- Whether or not a number has been chosen in the current round.
     p0: player(0, playerTurn, numberChosen);
     p1: player(1, playerTurn, numberChosen);
+
+-- The chosen number is the same for all players, during a round.
+TRANS next(p0.choice) = next(p1.choice);
 
 ASSIGN
     init(playerTurn) := 0; -- Player 0 may start choosing.
@@ -28,8 +30,6 @@ ASSIGN
         TRUE: p1.dice;
     esac;
 
-TRANS next(p0.choice) = next(p1.choice);
-
 -- Enable line below to make sure one player always wins.
 --JUSTICE (p0.dice = 0 | p1.dice = 0);
 
@@ -51,16 +51,15 @@ DEFINE
     nrplayers := 2;
     nrdice := 5;
 VAR
-        dice: 0 .. nrdice; -- The number of dice the player has left.
-        eyes: 1 .. 6; -- The values of all the dice, changes after each roll.
-        choice: 1 .. 6; -- Choice made by the player.
-        action: {waiting, choosing, chose, rolling, done, lost};
-        points: 0 .. nrdice;
-        i: 0 .. (nrdice - 1); -- Probably needed for counting points, currently unused.
-
+    dice: 0 .. nrdice; -- The number of dice the player has left.
+    eyes: 1 .. 6; -- The values of all the dice, changes after each roll.
+    choice: 1 .. 6; -- Choice made by the player.
+    action: {waiting, choosing, chose, rolling, done, lost};
+    points: 0 .. nrdice;
+    i: 0 .. (nrdice - 1); -- Probably needed for counting points, currently unused.
 DEFINE
-        hasTurn := playerTurn = id; -- To know if the current player may choose
-        mayRoll := action != lost & numberChosen; -- To know if the current player can roll their dice.
+    hasTurn := playerTurn = id; -- To know if the current player may choose
+    mayRoll := action != lost & numberChosen; -- To know if the current player can roll their dice.
 
 -- This player gives the turn to the next player at the end of the round.
 TRANS (hasTurn & (action = done | action = lost)) -> next(playerTurn) = (playerTurn + 1) mod nrplayers;
@@ -79,46 +78,46 @@ TRANS (hasTurn & next(action) != done & next(action) != chose) -> next(numberCho
 TRANS next(action) != rolling -> (next(eyes) = eyes);
 
 ASSIGN
-        init(dice) := nrdice; -- Initial number of dice.
-        init(action) := waiting; -- Initially all players are waiting.
-        init(points) := 0; -- Initially all players have 0 points.
-        init(i) := 0; -- Used as a counter for indexing the `eyes` array.
-        init(choice) := 1;
-        
-        -- When the player is choosing, undeterministically choose a new number, otherwise keep unaltered.
-        next(choice) := case
-            action != choosing & hasTurn = TRUE: choice;
-            TRUE: 1 .. 6;
-        esac;
+    init(dice) := nrdice; -- Initial number of dice.
+    init(action) := waiting; -- Initially all players are waiting.
+    init(points) := 0; -- Initially all players have 0 points.
+    init(i) := 0; -- Used as a counter for indexing the `eyes` array.
+    init(choice) := 1;
+    
+    -- When the player is choosing, undeterministically choose a new number, otherwise keep unaltered.
+    next(choice) := case
+        action != choosing & hasTurn = TRUE: choice;
+        TRUE: 1 .. 6;
+    esac;
 
-        -- Define the next action.
-        next(action):= case
-            next(dice) = 0: lost;
-            action = choosing: chose;
-            action = chose & mayRoll: rolling;
-            action = chose: chose;
-            action = waiting & mayRoll = TRUE: rolling;
-            action = waiting & hasTurn = TRUE: choosing;
-            action = waiting: waiting;
-            action = rolling & i = (nrdice - 1): done;
-            action = rolling: rolling;
-            action = done: waiting;
-            action = lost: lost;
-        esac;
+    -- Define the next action.
+    next(action):= case
+        next(dice) = 0: lost;
+        action = choosing: chose;
+        action = chose & mayRoll: rolling;
+        action = chose: chose;
+        action = waiting & mayRoll = TRUE: rolling;
+        action = waiting & hasTurn = TRUE: choosing;
+        action = waiting: waiting;
+        action = rolling & i = (nrdice - 1): done;
+        action = rolling: rolling;
+        action = done: waiting;
+        action = lost: lost;
+    esac;
 
-        -- Increment the array index, modulo the number of dice that are left. TODO only update when in certain action state.
-        next(i) := case
-            dice = 0: 0;
-            action != rolling: 0;
-            TRUE: (i + 1) mod nrdice;
-        esac;
+    -- Increment the array index, modulo the number of dice that are left. TODO only update when in certain action state.
+    next(i) := case
+        dice = 0: 0;
+        action != rolling: 0;
+        TRUE: (i + 1) mod nrdice;
+    esac;
 
-        next(points) := case
-            next(action) = waiting | next(action) = lost: 0;
-            points = nrdice: nrdice;
-            action = rolling & i < dice & eyes = choice: (points + 1);
-            TRUE: points;
-        esac;
+    next(points) := case
+        next(action) = waiting | next(action) = lost: 0;
+        points = nrdice: nrdice;
+        action = rolling & i < dice & eyes = choice: (points + 1);
+        TRUE: points;
+    esac;
 
 -- When a player is choosing he must always eventually be done so.
 SPEC AG (action = choosing -> AF(action = chose));
