@@ -158,8 +158,6 @@ SPEC AG (dice = 0 -> AF action = lost);
 SPEC AG (action = rolling -> mayRoll);
 -- A player can have at most as many points as he has dice in that round.
 SPEC AG points <= dice;
--- When a player has the turn during a round, he will eventually not have the turn anymore.
-SPEC AG (hasTurn -> AF !hasTurn);
 -- It is possible to get the maximum number of points.
 SPEC EF (points = nrdice);
 -- It is possible to get any number of points.
@@ -171,3 +169,5 @@ SPEC AG (action = rolling & choice = 3 -> A[choice = 3 U action != rolling]);
 SPEC AG (action = rolling & choice = 4 -> A[choice = 4 U action != rolling]);
 SPEC AG (action = rolling & choice = 5 -> A[choice = 5 U action != rolling]);
 SPEC AG (action = rolling & choice = 6 -> A[choice = 6 U action != rolling]);
+-- When a player has the turn during a round, he will eventually not have the turn anymore.
+SPEC AG (hasTurn -> AF !hasTurn);
