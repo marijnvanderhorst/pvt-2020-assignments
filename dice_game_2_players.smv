@@ -51,8 +51,9 @@ SPEC EF (p0.action = rolling & p1.action = rolling & p0.eyes = p1.eyes);
 -- It is possible for players to roll different number of eyes.
 SPEC EF (p0.action = rolling & p1.action = rolling & p0.eyes != p1.eyes);
 -- Verify that the ordering of which player is choosing is fair.
-SPEC AG p0.action = choosing -> A[p0.action != choosing U p1.action = choosing];
-SPEC AG p1.action = choosing -> A[p1.action != choosing U p0.action = choosing];
+-- Part after AX is equivalent to A[p0.action != choosing W p1.action = choosing].
+SPEC AG (p0.action = choosing -> AX !E[p1.action != choosing U p0.action = choosing & p1.action != choosing]);
+SPEC AG (p1.action = choosing -> AX !E[p0.action != choosing U p1.action = choosing & p0.action != choosing]);
 
 MODULE player(id, nrplayers, playerTurn, numberChosen, smallestPoints, stillPlaying, choosingPlayerPoints)
 DEFINE
