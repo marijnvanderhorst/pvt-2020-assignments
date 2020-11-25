@@ -28,6 +28,8 @@ TRANS next(p0.choice) = next(p1.choice);
 
 -- Verify that no deadlock occurs.
 SPEC AG EX TRUE;
+-- It is possible for the game to end.
+SPEC EF stillPlaying = FALSE;
 -- Always one player loses eventually (and thus the other player wins).
 --SPEC AF (p0.action = lost | p1.action = lost);
 -- Never all players lose at the same time (and thus at least one player always wins).
@@ -44,6 +46,13 @@ SPEC AG (p0.action = chose | p1.action = chose -> AF((p0.action = rolling | p0.a
 SPEC EF (p0.action = done & p1.action = done & p0.points = p1.points);
 -- It is possible for players to not have the same number of points at the end of a round.
 SPEC EF (p0.action = done & p1.action = done & p0.points != p1.points);
+-- It is possible for players to roll the same number of eyes.
+SPEC EF (p0.action = rolling & p1.action = rolling & p0.eyes = p1.eyes);
+-- It is possible for players to roll different number of eyes.
+SPEC EF (p0.action = rolling & p1.action = rolling & p0.eyes != p1.eyes);
+-- Verify that the ordering of which player is choosing is fair.
+SPEC AG p0.action = choosing -> A[p0.action != choosing U p1.action = choosing];
+SPEC AG p1.action = choosing -> A[p1.action != choosing U p0.action = choosing];
 
 MODULE player(id, nrplayers, playerTurn, numberChosen, smallestPoints, stillPlaying, choosingPlayerPoints)
 DEFINE
