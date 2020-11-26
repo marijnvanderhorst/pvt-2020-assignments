@@ -5,18 +5,20 @@ VAR
     p0: player(0, nrplayers, playerTurn, numberChosen, smallestPoints, stillPlaying, choosingPlayerPoints);
     p1: player(1, nrplayers, playerTurn, numberChosen, smallestPoints, stillPlaying, choosingPlayerPoints);
     p2: player(2, nrplayers, playerTurn, numberChosen, smallestPoints, stillPlaying, choosingPlayerPoints);
+    p3: player(3, nrplayers, playerTurn, numberChosen, smallestPoints, stillPlaying, choosingPlayerPoints);
 DEFINE
     -- The total number of players in the game.
-    nrplayers := 3;
+    nrplayers := 4;
     -- The smallest number of points of all players.
-    smallestPoints := min(p0.points, min(p1.points, p2.points));
+    smallestPoints := min(p0.points, min(p1.points, min(p2.points, p3.points)));
     -- Whether there are still at least 2 players left.
-    stillPlaying := count(p0.action = lost, p1.action = lost, p2.action = lost) <= nrplayers - 2;
+    stillPlaying := count(p0.action = lost, p1.action = lost, p2.action = lost, p3.action = lost) <= nrplayers - 2;
     -- The number of points that the player whose turn it is has.
     choosingPlayerPoints := case
         playerTurn = 0: p0.points;
         playerTurn = 1: p1.points;
         playerTurn = 2: p2.points;
+        playerTurn = 3: p3.points;
     esac;
 
 -- Initially, no number has been chosen.
@@ -25,9 +27,10 @@ INIT numberChosen = FALSE;
 -- The chosen number is the same for all players, during a round.
 TRANS next(p0.choice) = next(p1.choice);
 TRANS next(p0.choice) = next(p2.choice);
+TRANS next(p0.choice) = next(p3.choice);
 
 -- Enable the line below to make sure one player always wins.
---JUSTICE (count(p0.dice = 0, p1.dice = 0, p2.dice = 0) = 2);
+--JUSTICE (count(p0.dice = 0, p1.dice = 0, p2.dice = 0, p3.dice = 0) = 3);
 
 -- Verify that no deadlock occurs.
 SPEC AG EX TRUE;
@@ -36,28 +39,29 @@ SPEC EF stillPlaying = FALSE;
 -- Always one player loses eventually (and thus the other player wins).
 --SPEC AF (p0.action = lost | p1.action = lost | p2.action = lost);
 -- Never all players lose at the same time (and thus at least one player always wins).
-SPEC AG (p0.action != lost | p1.action != lost | p2.action != lost);
+SPEC AG (p0.action != lost | p1.action != lost | p2.action != lost | p3.action != lost);
 -- When the game is still going, always exactly one of the players has the turn.
-SPEC AG stillPlaying -> (count(p0.hasTurn, p1.hasTurn, p2.hasTurn) = 1);
+SPEC AG stillPlaying -> (count(p0.hasTurn, p1.hasTurn, p2.hasTurn, p3.hasTurn) = 1);
 -- When the players are rolling their dice, they do check against the same chosen number.
-SPEC AG ((p0.action = rolling | p1.action = rolling | p2.action = rolling) -> p0.choice = p1.choice & p1.choice = p2.choice);
+SPEC AG ((p0.action = rolling | p1.action = rolling | p2.action = rolling | p3.action = rolling) -> p0.choice = p1.choice & p1.choice = p2.choice & p2.choice = p3.choice);
 -- When a player is rolling, none of the players is currently choosing a number.
-SPEC AG (p0.action = rolling | p1.action = rolling | p2.action = rolling -> p0.action != choosing & p1.action != choosing & p2.action != choosing);
+SPEC AG (p0.action = rolling | p1.action = rolling | p2.action = rolling | p3.action = rolling -> p0.action != choosing & p1.action != choosing & p2.action != choosing & p3.action != choosing);
 -- If one of the players has chosen a number, all players will be rolling at some point, unless they have already lost.
-SPEC AG (p0.action = chose | p1.action = chose | p2.action = chose -> AF((p0.action = rolling | p0.action = lost) & (p1.action = rolling | p1.action = lost) & (p2.action = rolling | p2.action = lost)));
+SPEC AG (p0.action = chose | p1.action = chose | p2.action = chose | p3.action = chose -> AF((p0.action = rolling | p0.action = lost) & (p1.action = rolling | p1.action = lost) & (p2.action = rolling | p2.action = lost) & (p3.action = rolling | p3.action = lost)));
 -- It is possible for all players to have the same number of points at the end of a round.
-SPEC EF (p0.action = done & p1.action = done & p2.action = done & p0.points = p1.points & p1.points = p2.points);
+SPEC EF (p0.action = done & p1.action = done & p2.action = done & p3.action = done & p0.points = p1.points & p1.points = p2.points & p2.points = p3.points);
 -- It is possible for players to not have the same number of points at the end of a round.
-SPEC EF (p0.action = done & p1.action = done & p2.action = done & p0.points != p1.points & p1.points != p2.points);
+SPEC EF (p0.action = done & p1.action = done & p2.action = done & p3.action = done & p0.points != p1.points & p1.points != p2.points & p2.points != p3.points);
 -- It is possible for players to roll the same number of eyes.
-SPEC EF (p0.action = rolling & p1.action = rolling & p2.action = rolling & p0.eyes = p1.eyes & p1.eyes = p2.eyes);
+SPEC EF (p0.action = rolling & p1.action = rolling & p2.action = rolling & p2.action = rolling & p0.eyes = p1.eyes & p1.eyes = p2.eyes & p2.eyes = p3.eyes);
 -- It is possible for players to roll different number of eyes.
-SPEC EF (p0.action = rolling & p1.action = rolling & p2.action = rolling & p0.eyes != p1.eyes & p1.eyes != p2.eyes);
+SPEC EF (p0.action = rolling & p1.action = rolling & p2.action = rolling & p3.action = rolling & p0.eyes != p1.eyes & p1.eyes != p2.eyes & p2.eyes != p3.eyes);
 -- Verify that the ordering of which player is choosing is fair.
 -- Part after AX is equivalent to A[p0.action != choosing W p1.action = choosing | p1.action = lost].
 LTLSPEC G (p0.action = choosing -> X ((p1.action = choosing | p1.action = lost) V p0.action != choosing));
 LTLSPEC G (p1.action = choosing -> X ((p2.action = choosing | p2.action = lost) V p1.action != choosing));
-LTLSPEC G (p2.action = choosing -> X ((p0.action = choosing | p0.action = lost) V p2.action != choosing));
+LTLSPEC G (p2.action = choosing -> X ((p3.action = choosing | p3.action = lost) V p2.action != choosing));
+LTLSPEC G (p3.action = choosing -> X ((p0.action = choosing | p0.action = lost) V p3.action != choosing));
 
 MODULE player(id, nrplayers, playerTurn, numberChosen, smallestPoints, stillPlaying, choosingPlayerPoints)
 DEFINE
