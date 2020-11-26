@@ -46,7 +46,7 @@ SPEC AG (p0.action != lost | p1.action != lost | p2.action != lost | p3.action !
 -- When the game is still going, always exactly one of the players has the turn.
 SPEC AG stillPlaying -> (count(p0.hasTurn, p1.hasTurn, p2.hasTurn, p3.hasTurn, p4.hasTurn) = 1);
 -- When the players are rolling their dice, they do check against the same chosen number.
-SPEC AG ((p0.action = rolling | p1.action = rolling | p2.action = rolling | p3.action = rolling | p4.action = rolling) -> p0.choice = p1.choice & p1.choice = p2.choice & p2.choice = p3.choice, p3.choice = p4.choice);
+SPEC AG ((p0.action = rolling | p1.action = rolling | p2.action = rolling | p3.action = rolling | p4.action = rolling) -> p0.choice = p1.choice & p1.choice = p2.choice & p2.choice = p3.choice & p3.choice = p4.choice);
 -- When a player is rolling, none of the players is currently choosing a number.
 SPEC AG (p0.action = rolling | p1.action = rolling | p2.action = rolling | p3.action = rolling | p4.action = rolling -> p0.action != choosing & p1.action != choosing & p2.action != choosing & p3.action != choosing & p4.action != choosing);
 -- If one of the players has chosen a number, all players will be rolling at some point, unless they have already lost.
