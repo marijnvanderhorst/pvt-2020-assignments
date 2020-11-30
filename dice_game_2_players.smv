@@ -50,10 +50,10 @@ SPEC EF (p0.action = done & p1.action = done & p0.points != p1.points);
 SPEC EF (p0.action = rolling & p1.action = rolling & p0.eyes = p1.eyes);
 -- It is possible for players to roll different number of eyes.
 SPEC EF (p0.action = rolling & p1.action = rolling & p0.eyes != p1.eyes);
--- Verify that the ordering of which player is choosing is fair.
--- Part after AX is equivalent to A[p0.action != choosing W p1.action = choosing].
-SPEC AG (p0.action = choosing -> AX !E[p1.action != choosing U p0.action = choosing & p1.action != choosing]);
-SPEC AG (p1.action = choosing -> AX !E[p0.action != choosing U p1.action = choosing & p0.action != choosing]);
+-- Verify that the ordering of which player is choosing is fair. States that always when a player
+-- is choosing in the current state, he must not be choosing until the next player has chosen or lost.
+LTLSPEC G (p0.action = choosing -> X ((p1.action = choosing | p1.action = lost) V p0.action != choosing));
+LTLSPEC G (p1.action = choosing -> X ((p0.action = choosing | p0.action = lost) V p1.action != choosing));
 
 MODULE player(id, nrplayers, playerTurn, numberChosen, smallestPoints, stillPlaying, choosingPlayerPoints)
 DEFINE
