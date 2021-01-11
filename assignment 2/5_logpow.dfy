@@ -41,7 +41,7 @@ method powerLog(a: int, b: int) returns (p: int)  //change per 8-1-2019
       assert(pow(a, b) == p * pow(base, exp));
       p := p * p;
       exp := exp / 2;
-      assume(pow(a, b) == p * pow(base, exp));
+      assert(pow(a, b) == p * pow(base, exp));
     }
     assert(pow(a, b) == p * pow(base, exp));
   }
@@ -62,9 +62,6 @@ method powerLog(a: int, b: int) returns (p: int)  //change per 8-1-2019
 
 /*----- Lemmas -----*/
 
-// TODO
-
-// something something pow(a,b) == pow(a,b-1) * a iff b > 1
 lemma {:induction false} decreasePowByOne(a: int, b: int)
   ensures pow(a,b) == pow (a,b-1) * a
   requires b >= 1;
