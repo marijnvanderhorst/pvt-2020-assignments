@@ -1,96 +1,72 @@
+/**
+ * 2IMP10, Program verification techniques, Assignment 2, Excercise 5.
+ *
+ * M. van der Horst (1000979 - m.v.d.horst@student.tue.nl)
+ * T.M. Verberk (1016472 - t.m.verberk@student.tue.nl)
+ */
+
 method powerLog(a: int, b: int) returns (p: int)  //change per 8-1-2019
   requires b >= 0;
   ensures p == pow(a, b);
 {
+  // Edge case
+  if (b == 0) {
+    return 1;
+  }
+
 	var base: int; // base
   var exp: int; // exponent
 
-  // TODO initialize p, base, and exp
-  base := a;
-  exp := b;
-  p := 1;
+  base := a; // Initialize base with a
+  exp := b; // Initialize exponent with b
+  p := 1; // Will eventually contain the result
 
-
-	while (exp > 0)
-    invariant exp >= 0;
-    invariant pow(a,b) == pow(a,b);
-    invariant pow(a, exp) == pow(a, exp);
-    invariant pow(base, b) == pow(base, b);
-    invariant pow(base, exp) == pow(base, exp);
-    invariant pow(a, b) == p * pow(base, exp);
-    //invariant pow(base, exp) == p * pow(base, exp);
+  // Iterative square-and-multiply implementation
+	while (exp > 1)
+    invariant exp >= 1;
+    invariant p * pow(base, exp) == pow(a, b);
     decreases exp;
 	{
-    assume(pow(a, b) == p * pow(base, exp));
-    
-    // TODO fill in body
-    if(exp % 2 == 1){
-      decreasePowByOne(base, exp);
-      p := p * base;
-      exp := exp - 1;
-    }
-    assert(pow(a, b) == p * pow(base, exp));
-    // if(p == 1 && exp > 0){
-    //   p := base;
-    // }
+    if(exp % 2 == 0){ // exponent even
+      lemmaSqBaseHalfExp(base, exp);
+      
+      base := base * base; // Square the base
+      exp := exp / 2; // Half the exponent
 
-    assert(pow(a, b) == p * pow(base, exp));
-
-    if(exp > 0){
-      decreasePowByHalf(base, exp);
-      assert(pow(a, b) == p * pow(base, exp));
-      p := p * p;
-      exp := exp / 2;
-      assert(pow(a, b) == p * pow(base, exp));
+    } else { // exponent odd
+      p := p * base; // Multiply p by base
+      exp := exp - 1; // Decrease exponent
     }
-    assert(pow(a, b) == p * pow(base, exp));
   }
 
-  base := a;
-  exp := b;
-  p := 1;
+  assert (exp == 1);
+  assert (pow(base, exp) == base);
 
-  while (exp > 0)
-    invariant pow(a, b) == p * pow(base, exp);
-    decreases exp;
-	{
-    // TODO fill in body
-      p := p * base;
-      exp := exp - 1;
-  }
+  p := p * base; // Compute the result
 }
 
 /*----- Lemmas -----*/
-
-lemma {:induction false} decreasePowByOne(a: int, b: int)
-  ensures pow(a,b) == pow (a,b-1) * a
-  requires b >= 1;
-  {
-
-  }
-
-lemma {:induction false} decreasePowByHalf(a:int, b:int)
-  decreases a, b;
-  requires b > 1;
+lemma {:induction false} lemmaSqBaseHalfExp(a: int, b: int)
+  requires b >= 0;
   requires b % 2 == 0;
-  ensures pow(a, b) == pow (a, b/2) * pow(a, b/2);
+  ensures pow(a, b) == pow(a * a, b / 2);
+  decreases a, b;
   {
-      if(b == 2) {
-        // Induction base case
-        assert (pow(a, b) == pow(a, 1) * pow(a, 1));
-      } else {
-        // Inductive step
-        decreasePowByHalf(a, b - 2);
-        assert (pow(a, b - 2) == pow(a, b/2 - 1) * pow(a, b/2 - 1));
-        
-        assert (pow(a, b) == a * a * pow(a, b - 2));
-        assert (a * a * pow(a, b - 2) == a * a * pow(a, b/2 - 1) * pow(a, b/2 - 1));
-        assert (a * a * pow(a, b/2 - 1) * pow(a, b/2 - 1) == pow(a, b/2) * pow(a, b/2));
-      } 
+    // Proof by induction
+    if (b == 0) { // Base case
+      assert (pow(a, 0) == 1);
+      assert (pow(a * a, 0) == 1);
+    } else if (b == 2) { // Base case
+      assert (pow(a, 2) == a * pow(a, 1) == a * a);
+      assert (pow(a * a, 1) == a * a);
+    } else { // Inductive step
+      lemmaSqBaseHalfExp(a, b - 2);
+      assert (pow(a, b) == a * a * pow(a, b - 2));
+      assert (pow(a, b - 2) == pow(a * a, b/2 - 1));
+    }
   }
 
 /*-------------- Specification -----------*/
-
 function pow(a: int, b: int) : int
   requires b >= 0;
   decreases a,b;
