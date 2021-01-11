@@ -13,7 +13,7 @@ method powerLog(a: int, b: int) returns (p: int)  //change per 8-1-2019
 
 	while (exp > 0)
     invariant exp >= 0;
-    invariant pow(a,b) == pow(a,b)
+    invariant pow(a,b) == pow(a,b);
     invariant pow(a, exp) == pow(a, exp);
     invariant pow(base, b) == pow(base, b);
     invariant pow(base, exp) == pow(base, exp);
@@ -41,7 +41,7 @@ method powerLog(a: int, b: int) returns (p: int)  //change per 8-1-2019
       assert(pow(a, b) == p * pow(base, exp));
       p := p * p;
       exp := exp / 2;
-      assert(pow(a, b) == p * pow(base, exp));
+      assume(pow(a, b) == p * pow(base, exp));
     }
     assert(pow(a, b) == p * pow(base, exp));
   }
@@ -65,46 +65,32 @@ method powerLog(a: int, b: int) returns (p: int)  //change per 8-1-2019
 // TODO
 
 // something something pow(a,b) == pow(a,b-1) * a iff b > 1
-lemma decreasePowByOne(a: int, b: int)
+lemma {:induction false} decreasePowByOne(a: int, b: int)
   ensures pow(a,b) == pow (a,b-1) * a
   requires b >= 1;
   {
 
   }
 
-// something something pow(a,b) == pow(a,b/2) * pow(a, b/2) if b == even
-lemma decreasePowByHalf(a:int, b:int)
-  ensures pow(a,b) == if b%2 == 1 then a * pow(a,b-1) else pow (a,b/2) * pow(a,b/2);
+lemma {:induction false} decreasePowByHalf(a:int, b:int)
+  decreases a, b;
   requires b > 1;
+  requires b % 2 == 0;
+  ensures pow(a, b) == pow (a, b/2) * pow(a, b/2);
   {
-      // var p := pow(a,b);
-      // var p1 := pow(a, b/2);
-      // assert(a*a*a*a*1 == a*a*1 * a*a*1);
-      // var p2 := pow(a, b/2);
-      // assert(pow(a,2) == pow(a,1) * pow(a,1));
-      // assert(pow(a,4) == pow(a,2) * pow(a,2));
-      //assert(pow(a,2) == pow(a,1) * pow(a,1));
-      // assert(1 == 1);
-      // simpleLemma(p);
-      // while b % 2 == 0
-      // {
-
-      // }
-      if(b==2){
-        assert(pow(a,2) == pow(a,1) * pow(a,1));
-      } else if (b % 2 ==0 ) {
-        decreasePowByHalf(a, b/2);
-        assert(pow(a,b) == pow(a,b/2) * pow(a, b/2));
+      if(b == 2) {
+        // Induction base case
+        assert (pow(a, b) == pow(a, 1) * pow(a, 1));
       } else {
-        decreasePowByHalf(a, b-1);
-        assert(pow(a,b) == a* pow(a,b-1));
-      }
-
+        // Inductive step
+        decreasePowByHalf(a, b - 2);
+        assert (pow(a, b - 2) == pow(a, b/2 - 1) * pow(a, b/2 - 1));
+        
+        assert (pow(a, b) == a * a * pow(a, b - 2));
+        assert (a * a * pow(a, b - 2) == a * a * pow(a, b/2 - 1) * pow(a, b/2 - 1));
+        assert (a * a * pow(a, b/2 - 1) * pow(a, b/2 - 1) == pow(a, b/2) * pow(a, b/2));
+      } 
   }
-lemma simpleLemma(a: int)
-  ensures a * 1 == a;
-  {}
-
 
 /*-------------- Specification -----------*/
 
