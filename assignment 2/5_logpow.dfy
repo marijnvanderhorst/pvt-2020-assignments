@@ -5,7 +5,7 @@
  * T.M. Verberk (1016472 - t.m.verberk@student.tue.nl)
  */
 
-method powerLog(a: int, b: int) returns (p: int)  //change per 8-1-2019
+method powerLog(a: int, b: int) returns (p: int)
   requires b >= 0;
   ensures p == pow(a, b);
 {
