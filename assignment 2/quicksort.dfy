@@ -11,7 +11,8 @@
 method {:verify true} swap(a: array<int>, i: nat, j: nat)
   modifies a; // needed for arrays (since they are objects, not values such as sequences)
 
-  requires 0 <= i <= j < a.Length; // i and j must be within bounds
+  requires 0 <= i < a.Length; // i must be within bounds
+  requires 0 <= j < a.Length; // j must be within bounds
   
   ensures a[i] == old(a[j]) && a[j] == old(a[i]); // elements at index i and j are swapped
   ensures forall k | 0 <= k < a.Length && k != i && k != j :: a[k] == old(a[k]); // The other elements remain untouched
@@ -33,8 +34,8 @@ method Partition(a: array<int>, lo: int, hi: int) returns (pivot: int)
   ensures lo <= pivot <= hi; // Ensure pivot is within bounds
   ensures forall k | 0 <= k < lo || hi < k < a.Length :: a[k] == old(a[k]); // Ensure other part of array is untouched
   ensures a[pivot] == old(a[hi]); // Ensure that the pivot element is the last element of the input array
-  ensures forall k | lo <= k <= hi && k < pivot :: a[k] < old(a[hi]); // Ensure partitioning within lo..hi bounds
-  ensures forall k | lo <= k <= hi && k >= pivot :: a[k] >= old(a[hi]); // Ensure partitioning within lo..hi bounds
+  ensures forall k | lo <= k < pivot :: a[k] < old(a[hi]); // Ensure partitioning within lo..hi bounds
+  ensures forall k | pivot <= k <= hi :: a[k] >= old(a[hi]); // Ensure partitioning within lo..hi bounds
   ensures 0 < lo ==> Partitioned(a, 0, lo - 1, lo, hi); // Ensure first part is still partitioned
   ensures hi < a.Length - 1 ==> Partitioned(a, lo, hi, hi + 1, a.Length - 1); // Ensure last part is still partitioned
   ensures lo < pivot ==> Partitioned(a, 0, pivot - 1, pivot, hi); // Ensure partitioning within lo..hi bounds
