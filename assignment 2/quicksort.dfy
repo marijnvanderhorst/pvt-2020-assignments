@@ -15,7 +15,6 @@ method {:verify true} swap(a: array<int>, i: nat, j: nat)
   
   ensures a[i] == old(a[j]) && a[j] == old(a[i]); // elements at index i and j are swapped
   ensures forall k | 0 <= k < a.Length && k != i && k != j :: a[k] == old(a[k]); // The other elements remain untouched
-  ensures multiset(a[..]) == multiset(old(a[..])); // Ensure array keeps all elements
 {
   a[i], a[j] := a[j], a[i];
 }
@@ -33,7 +32,6 @@ method Partition(a: array<int>, lo: int, hi: int) returns (pivot: int)
 
   ensures lo <= pivot <= hi; // Ensure pivot is within bounds
   ensures forall k | 0 <= k < lo || hi < k < a.Length :: a[k] == old(a[k]); // Ensure other part of array is untouched
-  ensures multiset(a[..]) == multiset(old(a[..])); // Ensure partitioned array contains the same elements
   ensures a[pivot] == old(a[hi]); // Ensure that the pivot element is the last element of the input array
   ensures forall k | lo <= k <= hi && k < pivot :: a[k] < old(a[hi]); // Ensure partitioning within lo..hi bounds
   ensures forall k | lo <= k <= hi && k >= pivot :: a[k] >= old(a[hi]); // Ensure partitioning within lo..hi bounds
@@ -54,7 +52,6 @@ method Partition(a: array<int>, lo: int, hi: int) returns (pivot: int)
     invariant a[hi] == pVal; // pivot value remains at the end of the array
     invariant forall k | lo <= k < pivot :: a[k] < pVal; // values before pivot are smaller
     invariant forall k | pivot <= k < j :: pVal <= a[k]; // values after pivot greater or equal
-    invariant multiset(a[..]) == multiset(old(a[..])) // array always contains the same values
     invariant 0 < lo ==> Partitioned(a, 0, lo - 1, lo, hi); // first part of the array remains partitioned
     invariant hi < a.Length - 1 ==> Partitioned(a, lo, hi, hi + 1, a.Length - 1); // last part remains partitioned
   {
@@ -81,7 +78,6 @@ method Quicksort(a: array<int>, lo: int, hi: int)
   
   ensures forall k | 0 <= k < lo || hi < k < a.Length :: a[k] == old(a[k]); // Other part of the array is untouched
   ensures Sorted(a, lo, hi); // a[lo..hi] is sorted at the end
-  ensures multiset(a[..]) == multiset(old(a[..])); // array always contains the same values
   ensures 0 < lo ==> Partitioned(a, 0, lo - 1, lo, hi); // first part of the array remains partitioned
   ensures hi < a.Length - 1 ==> Partitioned(a, lo, hi, hi + 1, a.Length - 1); // last part remains partitioned
   
