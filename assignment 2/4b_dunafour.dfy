@@ -1,3 +1,10 @@
+/**
+ * 2IMP10, Program verification techniques, Assignment 2, Excercise 4b.
+ *
+ * M. van der Horst (1000979 - m.v.d.horst@student.tue.nl)
+ * T.M. Verberk (1016472 - t.m.verberk@student.tue.nl)
+ */
+
 /* Mauratius national flag
  * sort an array that has three different keys
  */
@@ -6,6 +13,8 @@
 datatype Color = Red | Blue | Yellow | Green 
 
 // ordering of colors: Red > Blue > Yellow > Green
+// Ensures that the array is properly divided.
+// Returns FALSE if color of d comes before the color of c
 predicate Above(c: Color, d: Color)
 {
   // c == Red || (c == Blue && d != Red) ....
@@ -15,10 +24,13 @@ predicate Above(c: Color, d: Color)
   (c == Green && d!= Red && d!= Blue && d != Yellow)
 }
 
+/*
+ * Sorts a flag on 4 colors
+ */
 method {:verify true}sortFlag(a: array<Color>)
   modifies a // needed for arrays (since they are objects, not values such as sequences)
-  ensures forall i,j | 0 <= i < j < a.Length :: Above(a[i], a[j])
-  ensures multiset(a[..]) == multiset(old(a[..]))
+  ensures forall i,j | 0 <= i < j < a.Length :: Above(a[i], a[j]) // Ensures the array is correctly sorted
+  ensures multiset(a[..]) == multiset(old(a[..])) //Ensures no elements are added or removed
 {
   var N := a.Length;
   var r, b, y, u := 0, 0, N, N; // marks the red part, Blue part, yellow part ,unsorted part
@@ -28,13 +40,13 @@ method {:verify true}sortFlag(a: array<Color>)
       RRRRRRRRRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBXXXXXXXXXXXXXXXYYYYYYYYYYGGGGGGGGGGGGGG
 
     */
-    invariant 0 <= r <= b <= u <= y <= N
-    invariant multiset(a[..]) == multiset(old(a[..]))
-    invariant forall k :: 0 <= k < r ==> a[k] == Red;
-    invariant forall k :: r <= k < b ==> a[k] == Blue;
-    invariant forall k :: u <= k < y ==> a[k] == Yellow;
-    invariant forall k :: y <= k < N ==> a[k] == Green;
-    decreases u - b;
+    invariant 0 <= r <= b <= u <= y <= N // Ensures that the indices are within array ranges
+    invariant multiset(a[..]) == multiset(old(a[..])) //makes sure that no items are added or removed
+    invariant forall k :: 0 <= k < r ==> a[k] == Red; // Ensures that all elements before index r are RED
+    invariant forall k :: r <= k < b ==> a[k] == Blue; // Ensures that all elements from index r untill and excluding index b are BLUE
+    invariant forall k :: u <= k < y ==> a[k] == Yellow; // Ensures that all elements from index u untill and excluding index y are YELLOW
+    invariant forall k :: y <= k < N ==> a[k] == Green; // Ensures that all elements from index y are GREEN
+    decreases u - b; // decreases u-w
   {
     if (a[b] == Green){
         u := u-1;
@@ -69,6 +81,7 @@ method {:verify true} swap(a: array<Color>, i: nat, j: nat)
       a[i], a[j] := a[j], a[i];
 }
 
+//Method that tests the ordering to make sure there are no unnecessary errors
 method testColordering() {
   assert Above(Red, Blue);
   assert Above(Blue, Yellow);
